@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply text-havens-blue font-sans bg-white antialiased leading-relaxed;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-havens-blue font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* Fluid Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold transition-all duration-300 transform outline-none select-none;
+  }
+  
+  .btn-yellow {
+    @apply bg-havens-yellow text-havens-blue-dark hover:-translate-y-1 hover:shadow-lg hover:shadow-havens-yellow/30;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-havens-blue text-havens-blue hover:bg-havens-blue hover:text-white;
+  }
+
+  /* Form Elements */
+  .form-label {
+    @apply block text-sm font-bold text-havens-blue-light mb-1.5;
+  }
+  
+  .form-input {
+    @apply w-full px-4 py-3 bg-havens-mint-light border-2 border-havens-mint rounded-xl focus:border-havens-green focus:ring-0 outline-none transition-colors text-havens-blue font-medium placeholder-havens-blue/40;
+  }
+
+  /* Slider overrides */
+  input[type="range"] {
+    @apply appearance-none w-full h-3 rounded-full bg-havens-mint outline-none cursor-pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    @apply appearance-none w-6 h-6 rounded-full bg-havens-yellow shadow hover:scale-110 transition-transform;
+  }
+  
+  /* Feature Grid Hover Effects */
+  .feat-card {
+    @apply p-8 rounded-3xl bg-transparent transition-all duration-300 border border-transparent hover:bg-white hover:border-havens-mint-dark hover:shadow-soft;
+  }
+
+  /* Testimonial Card */
+  .testi-card {
+    @apply p-8 rounded-3xl bg-havens-mint relative flex flex-col justify-between transition-transform duration-300 hover:-translate-y-2;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBEBD9; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #1B8C48; }

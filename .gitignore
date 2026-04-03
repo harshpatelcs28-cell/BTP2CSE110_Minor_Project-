@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+
+# IDE and Editor
+.idea/
+.vscode/
+*.swp
+
+# Build Artifacts
+frontend/dist/
+build/
+*.log
+
+# Models & Data Cache
+*.pkl
+*.model
+
+# OS Files
+desktop.ini
+Thumbs.db
