@@ -22,3 +22,6 @@ build/
 # OS Files
 desktop.ini
 Thumbs.db
+
+# Local artifacts
+artifacts/
