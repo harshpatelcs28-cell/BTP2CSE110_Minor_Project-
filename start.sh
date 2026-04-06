@@ -1,6 +1,12 @@
 #!/bin/bash
 echo "Starting Adaptive CropShield..."
 
+# Auto-run setup if dependencies are missing
+if [ ! -d "frontend/node_modules" ]; then
+    echo "[!] First time run detected. Installing dependencies automatically..."
+    bash setup.sh
+fi
+
 # Start Python ML Service in background
 echo "[1/3] Starting ML Engine on port 5001..."
 cd ml_engine
