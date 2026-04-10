@@ -1,258 +1,263 @@
-import React, { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const LandingPage = () => {
-  const cursorRef = useRef(null);
+  const navigate = useNavigate();
 
+  // Scroll to top on mount
   useEffect(() => {
-    const cursor = cursorRef.current;
-    if (!cursor) return;
-
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-    let cursorX = mouseX;
-    let cursorY = mouseY;
-
-    const moveCursor = (e) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    };
-
-    let animationFrame;
-    const render = () => {
-      // Smooth interpolation (lerp)
-      cursorX += (mouseX - cursorX) * 0.05;
-      cursorY += (mouseY - cursorY) * 0.05;
-      
-      // Center the orb on the cursor
-      cursor.style.transform = `translate3d(calc(${cursorX}px - 50%), calc(${cursorY}px - 50%), 0)`;
-      animationFrame = requestAnimationFrame(render);
-    };
-
-    window.addEventListener('mousemove', moveCursor);
-    render();
-
-    return () => {
-      window.removeEventListener('mousemove', moveCursor);
-      cancelAnimationFrame(animationFrame);
-    };
+    window.scrollTo(0, 0);
   }, []);
 
-  const testimonials = [
-    {
-      name: "Emily Smith",
-      title: "CEO, Green Acres",
-      image: "Emily",
-      color: "#8fb13d",
-      gradient: "from-[#8fb13d] to-[#2a5a4a]",
-      quote: "Honestly, moving our farm's sales online felt overwhelming until we found Havens. The platform just makes sense. Our local pickup orders have doubled since we launched, and it handles our inventory without us having to stress."
-    },
-    {
-      name: "Sarah Brown",
-      title: "Dir, Organic Roots",
-      image: "Sarah",
-      color: "#fbc943",
-      gradient: "from-[#fbc943] to-[#cd3d4c]",
-      quote: "What I love most is that the team actually gets agriculture. They built out a tracking dashboard for our organic shipments that saves me literally hours every Friday. It's totally shifted how we operate."
-    },
-    {
-      name: "David Rodriguez",
-      title: "Founder, Harvests Co",
-      image: "David",
-      color: "#b6e3f4",
-      gradient: "from-[#b6e3f4] to-[#163a50]",
-      quote: "We used to rely just on weekend farmers markets, but the custom storefront they built for us let us start a neighborhood CSA subscription program. Setup was painless and the support has been fantastic."
-    },
-    {
-      name: "Mark Evans",
-      title: "Farm Manager",
-      image: "Mark",
-      color: "#cd3d4c",
-      gradient: "from-[#cd3d4c] to-[#fbc943]",
-      quote: "The analytics tools are a lifesaver. Being able to track crop yields and map them directly against our online sales data finally gives us a clear picture of our actual profit margins."
-    },
-    {
-      name: "Jessica Chen",
-      title: "Orchard Owner",
-      image: "Jessica",
-      color: "#d2f3e0",
-      gradient: "from-[#d2f3e0] to-[#8fb13d]",
-      quote: "I am not exactly a tech person, but the interface is so incredibly simple. I can update our seasonal apple inventory right from my phone while I'm actually still out working in the orchard."
+  // Smart routing based on auth state
+  const handleAuthRoute = (e) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
     }
-  ];
+  };
 
   return (
-    <div className="w-full min-h-screen font-sans bg-[#f8fbfa] overflow-x-hidden selection:bg-[#8fb13d] selection:text-white relative">
+    <div className="w-full min-h-screen font-sans bg-[#052112] text-white selection:bg-[#d6a540] selection:text-[#052112]">
       
-      {/* Interactive Floating Orb Background */}
-      <div 
-        className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden"
-      >
-        <div 
-          ref={cursorRef}
-          className="absolute top-0 left-0 w-[40vw] h-[40vw] rounded-full mix-blend-multiply opacity-50 blur-[120px] bg-gradient-to-tr from-[#8fb13d]/60 to-[#fbc943]/60 will-change-transform"
-        ></div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="relative w-full p-6 lg:px-12 flex justify-between items-center z-50 bg-[#2a5a4a] text-white shadow-md">
-        <div className="text-2xl font-black tracking-tight flex items-center gap-1">
-          Adaptive CropShield<div className="w-2 h-2 rounded-full bg-[#fbc943] mt-1"></div>
+      {/* ── Header ── */}
+      <nav className="w-full px-6 py-6 lg:px-16 flex justify-between items-center bg-[#052112] border-b border-white/5 sticky top-0 z-50">
+        <div className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white">
+           CropShield
         </div>
-        <div className="space-x-8 flex items-center">
-          <Link to="/login" className="hover:text-[#fbc943] transition-colors font-semibold">Login</Link>
-          <Link to="/register" className="hidden md:inline-flex px-5 py-2 rounded-full border border-white/30 hover:border-[#fbc943] hover:bg-[#fbc943] hover:text-[#163a50] transition-all font-semibold text-sm">
-             Get Started
-          </Link>
+        
+        <div className="hidden lg:flex items-center space-x-12 text-xs font-bold tracking-widest text-[#698877] uppercase">
+           <a href="#home" className="text-[#d6a540] relative hover:text-[#eac466] transition-colors cursor-pointer group">
+             HOME
+             <span className="absolute -bottom-2 left-0 w-full h-[2px] bg-[#d6a540] transition-transform origin-left"></span>
+           </a>
+           <a href="#how-it-works" className="hover:text-white transition-colors cursor-pointer relative group">
+             HOW IT WORKS
+             <span className="absolute -bottom-2 left-0 w-full h-[2px] bg-[#d6a540] scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+           </a>
+           <a href="#features" className="hover:text-white transition-colors cursor-pointer relative group">
+             FEATURES
+             <span className="absolute -bottom-2 left-0 w-full h-[2px] bg-[#d6a540] scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></span>
+           </a>
+        </div>
+
+        <div>
+           <button 
+              onClick={handleAuthRoute}
+              className="px-6 py-2.5 bg-white/10 border border-white/10 rounded-full text-sm font-semibold text-white hover:bg-white/20 transition-all duration-300 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] active:scale-95"
+           >
+              Get Predictions
+           </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] w-full flex flex-col items-center justify-center pt-20 pb-32">
+      {/* ── Hero Section ── */}
+      <section id="home" className="max-w-[1440px] mx-auto px-6 lg:px-16 pt-24 pb-32 flex flex-col xl:flex-row items-center gap-16 xl:gap-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDQwTDAgMCBMNDAgNDBaIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wMSkiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4=')]">
         
-        {/* Abstract Premium Background Elements */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-          {/* Static Soft Abstract Nature Orbs */}
-          <div className="absolute top-[-10%] right-[-5%] w-[30vw] h-[30vw] rounded-full bg-[#fbc943]/20 blur-[100px] mix-blend-multiply"></div>
-          <div className="absolute bottom-[-10%] left-[10%] w-[40vw] h-[40vw] rounded-full bg-[#163a50]/5 blur-[100px] mix-blend-multiply"></div>
+        {/* Left Column - Text */}
+        <div className="xl:w-1/2 flex flex-col items-start pt-4 lg:pr-10">
+           <h1 className="font-serif text-6xl md:text-[5.5rem] lg:text-[7.5rem] text-white leading-[1.02] tracking-tight mb-8">
+             Adaptive CropShield
+           </h1>
+           <p className="text-lg text-[#95b0a1] font-normal mb-12 max-w-lg leading-relaxed">
+             Our system accurately predicts crop yield by analyzing local weather conditions, soil nutrients, and other vital environmental factors. Get the data-driven insights you need to improve your harvest.
+           </p>
+           
+           <div className="flex items-center gap-4">
+              <button 
+                onClick={handleAuthRoute} 
+                className="px-8 py-3.5 bg-[#d6a540] text-[#1c1809] rounded-full text-base font-bold hover:bg-[#eac466] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#d6a540]/20 active:translate-y-0"
+              >
+                See Live Predictions
+              </button>
+              <a 
+                href="#research" 
+                className="px-8 py-3.5 border border-white/30 bg-transparent rounded-full text-base font-bold text-white hover:bg-white/10 transition-all duration-300 hover:-translate-y-1 active:translate-y-0"
+              >
+                Explore Research
+              </a>
+           </div>
         </div>
 
-        {/* Hero Content */}
-        <div className="relative z-10 text-center px-6 max-w-5xl mx-auto flex flex-col items-center mt-10">
-          <h1 className="text-6xl md:text-7xl lg:text-[6rem] font-extrabold text-[#163a50] leading-[1.1] mb-8 tracking-tight">
-             Adaptive <br className="hidden md:block"/>
-             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#8fb13d] to-[#2a5a4a]">CropShield</span>
-          </h1>
-          
-          <p className="text-[#163a50]/70 text-lg md:text-2xl font-medium mb-12 max-w-3xl mx-auto leading-relaxed">
-            The intelligent software engine designed to maximize your farm's productivity. Leverage real-time analytics and dynamic modeling to consistently generate higher crop yields.
-          </p>
-          
-          <div className="group relative inline-flex">
-            <div className="absolute transition-all duration-1000 opacity-70 -inset-1 bg-gradient-to-r from-[#fbc943] to-[#8fb13d] rounded-full blur-lg group-hover:opacity-100 group-hover:-inset-2 group-hover:duration-200 animate-tilt pointer-events-none"></div>
-            <Link 
-              to="/register" 
-              className="relative inline-flex items-center justify-center bg-[#fbc943] text-[#163a50] font-bold text-xl py-5 px-12 rounded-full shadow-xl transition-all duration-300 transform group-hover:-translate-y-1 group-hover:bg-white"
-            >
-              Get Started 
-              <svg className="w-6 h-6 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-            </Link>
-          </div>
-        </div>
-      </section>
+        {/* Right Column - Cards */}
+        <div className="xl:w-1/2 w-full flex flex-col gap-6 lg:pl-10">
+            {/* Accuracy Card */}
+            <div className="bg-[#0b291a] border border-[#144229] rounded-3xl p-10 flex flex-col items-center justify-center text-center shadow-2xl transition-transform duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] group cursor-default">
+               <div className="w-12 h-12 mb-4 text-[#d6a540] transform transition-transform duration-500 group-hover:scale-110 group-hover:rotate-180">
+                 {/* Target Icon */}
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                   <circle cx="12" cy="12" r="10" />
+                   <circle cx="12" cy="12" r="6" />
+                   <circle cx="12" cy="12" r="2" />
+                 </svg>
+               </div>
+               <h3 className="text-5xl font-bold text-white mb-2 tracking-tight">94.2%</h3>
+               <p className="text-[#698877] text-xs font-bold tracking-widest uppercase">Prediction Accuracy</p>
+            </div>
 
-      {/* Approach Section - Refined Bento Box Style */}
-      <section className="relative w-full py-32 bg-transparent z-10">
-        <div className="max-w-7xl mx-auto px-6 md:px-12 flex flex-col items-center">
-          
-          <div className="text-center max-w-3xl mb-20">
-            <h2 className="text-4xl md:text-5xl font-black text-[#163a50] mb-6 tracking-tight">
-              Our <span className="text-[#8fb13d]">Approach</span>
-            </h2>
-            <p className="text-lg text-[#163a50]/70 font-medium leading-relaxed">
-              Transforming traditional agriculture into digital powerhouses. Our intelligent platform bridges the gap between field metrics and actionable online insights.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full">
-             {/* Feature 1 */}
-             <div className="bg-[#f8fbfa] rounded-3xl p-10 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 rounded-2xl bg-[#163a50] text-[#fbc943] flex items-center justify-center mb-8 shadow-lg">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <h3 className="text-2xl font-bold text-[#163a50] mb-4">Precision Analytics</h3>
-                <p className="text-[#163a50]/60 leading-relaxed font-medium">
-                  Harness real-time data to make decisions that maximize your harvest and minimize resource waste.
-                </p>
-             </div>
-
-             {/* Feature 2 */}
-             <div className="bg-[#f8fbfa] rounded-3xl p-10 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 rounded-2xl bg-[#8fb13d] text-white flex items-center justify-center mb-8 shadow-lg shadow-[#8fb13d]/30">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
-                </div>
-                <h3 className="text-2xl font-bold text-[#163a50] mb-4">Global Reach</h3>
-                <p className="text-[#163a50]/60 leading-relaxed font-medium">
-                  Expand your market boundaries. Deliver your produce to eager customers worldwide through tailored web platforms.
-                </p>
-             </div>
-
-             {/* Feature 3 */}
-             <div className="bg-[#f8fbfa] rounded-3xl p-10 border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 md:col-span-2 lg:col-span-1">
-                <div className="w-14 h-14 rounded-2xl bg-[#fbc943] text-[#163a50] flex items-center justify-center mb-8 shadow-lg shadow-[#fbc943]/30">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                </div>
-                <h3 className="text-2xl font-bold text-[#163a50] mb-4">Seamless Integration</h3>
-                <p className="text-[#163a50]/60 leading-relaxed font-medium">
-                  Protect your operations with robust, secure infrastructure that scales dynamically with your farming seasons.
-                </p>
-             </div>
-          </div>
+            {/* Weather Card */}
+            <div className="bg-[#0b291a] border border-[#144229] rounded-3xl p-10 flex flex-col items-center justify-center text-center shadow-2xl transition-transform duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] group cursor-default">
+               <div className="w-12 h-12 mb-4 text-[#d6a540] transform transition-transform duration-500 group-hover:scale-110">
+                 {/* Cloud Update Icon */}
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                   <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+                   <path d="M14 6L14 11M14 6L11 9M14 6L17 9" />
+                 </svg>
+               </div>
+               <h3 className="text-5xl font-bold text-white mb-2 tracking-tight">24/7</h3>
+               <p className="text-[#698877] text-xs font-bold tracking-widest uppercase">Weather Data</p>
+            </div>
         </div>
       </section>
 
-      {/* Testimonials Section - Premium Glassmorphic Marquee */}
-      <section className="py-32 bg-transparent relative z-10 w-full flex flex-col items-center">
-        
-        {/* Deep Abstract Glows */}
-        <div className="absolute top-0 right-[-10%] w-[40vw] h-[40vw] rounded-full bg-[#8fb13d]/10 blur-[120px] pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#fbc943]/10 blur-[150px] pointer-events-none"></div>
-
-        <div className="text-center mb-16 relative z-10 px-6">
-          <h2 className="text-4xl md:text-5xl font-black text-[#163a50] tracking-tight mb-4">Trusted by the Community</h2>
-          <p className="max-w-2xl mx-auto text-[#163a50]/70 font-medium text-lg leading-relaxed opacity-90">
-            Discover firsthand experiences from agriculturalists who have transformed their digital footprint.
-          </p>
-        </div>
-
-        {/* Marquee Carousel Container */}
-        <div className="w-full overflow-hidden relative z-10">
-          <div className="flex animate-marquee hover:animation-paused gap-8 px-4 py-8">
-            {/* We duplicate the arrays to create the infinite scrolling illusion */}
-            {[...testimonials, ...testimonials].map((testi, i) => (
-              <div key={i} className="min-w-[350px] max-w-[350px] md:min-w-[420px] md:max-w-[420px] bg-white/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-white hover:bg-white/60 transition-colors duration-300 shadow-xl flex-shrink-0">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br \${testi.gradient} p-[2px]`}>
-                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=\${testi.image}&backgroundColor=ffffff`} alt={testi.name} className="w-full h-full object-cover rounded-full bg-white" />
+      {/* ── Features Section ── */}
+      <section id="features" className="bg-[#faf8f2] w-full pt-20">
+         <div className="max-w-[1440px] mx-auto px-6 lg:px-16 pb-16">
+            
+            {/* Top Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 -mt-44 relative z-10">
+               
+               {/* Card 1 */}
+               <div className="bg-[#0b291a] text-white p-10 rounded-[2rem] shadow-2xl shadow-black/10 border border-white/5 transition-all duration-300 hover:-translate-y-2 group cursor-default">
+                  <div className="text-[#95b0a1] mb-6 transform transition-transform group-hover:scale-110 group-hover:text-white">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7h16M4 12h16M4 17h16" /></svg>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-[#163a50] text-lg">{testi.name}</h4>
-                    <p className={`text-xs font-bold tracking-wider uppercase text-[\${testi.color}]`}>{testi.title}</p>
-                  </div>
-                </div>
-                <p className="text-[#163a50]/80 text-base leading-relaxed font-medium">
-                  "{testi.quote}"
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+                  <h3 className="font-serif text-3xl mb-4 text-white font-normal">Live Weather Tracking</h3>
+                  <p className="text-[#95b0a1] font-medium leading-relaxed text-sm">
+                    We check the weather around your farm every hour so your predictions are always up to date.
+                  </p>
+               </div>
 
-      {/* Final CTA */}
-      <section className="py-24 bg-transparent relative flex justify-center text-center z-10 mt-12 border-t border-[#163a50]/5">
-         <div className="relative z-10 max-w-2xl px-6">
-            <h2 className="text-4xl font-black text-[#163a50] mb-6">Ready to Digiti<span className="text-[#8fb13d]">z</span>e your Farm?</h2>
-            <p className="text-[#163a50]/70 mb-10 font-medium">Join thousands of modern agriculturalists leveraging data for a better harvest.</p>
-            <Link to="/register" className="inline-flex items-center justify-center bg-[#163a50] text-white font-bold text-lg py-4 px-10 rounded-full hover:bg-[#8fb13d] transition-colors shadow-xl">
-               Start your Journey
-            </Link>
+               {/* Card 2 */}
+               <div className="bg-[#3e5f3d] text-white p-10 rounded-[2rem] shadow-2xl shadow-black/10 transition-all duration-300 hover:-translate-y-2 group cursor-default">
+                  <div className="text-[#b1ceaf] mb-6 transform transition-transform group-hover:scale-110 group-hover:text-white">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                  </div>
+                  <h3 className="font-serif text-3xl mb-4 text-white font-normal">Smart Crop Prediction</h3>
+                  <p className="text-[#b1ceaf] font-medium leading-relaxed text-sm">
+                    Our system looks at your soil and weather conditions and tells you how much crop you can expect to grow.
+                  </p>
+               </div>
+
+               {/* Card 3 */}
+               <div className="bg-[#0b291a] text-white p-10 rounded-[2rem] shadow-2xl shadow-black/10 border border-white/5 transition-all duration-300 hover:-translate-y-2 group cursor-default">
+                  <div className="text-[#95b0a1] mb-6 transform transition-transform group-hover:scale-110 group-hover:text-white">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  </div>
+                  <h3 className="font-serif text-3xl mb-4 text-white font-normal">Why We Think That</h3>
+                  <p className="text-[#95b0a1] font-medium leading-relaxed text-sm">
+                    We don't just give you a number — we show you exactly what factors we looked at and why, in simple terms.
+                  </p>
+               </div>
+
+            </div>
+
+         </div>
+
+         {/* ── How It Works (Timeline) ── */}
+         <div id="how-it-works" className="bg-[#faf8f2] py-24 border-t border-gray-100">
+            <div className="max-w-[1200px] mx-auto px-6 lg:px-12 text-center">
+               <h2 className="font-serif text-5xl md:text-6xl text-[#052112] mb-24">How It Works</h2>
+               
+               <div className="relative">
+                  {/* Dashed Line behind */}
+                  <div className="absolute top-8 left-0 right-0 h-0.5 border-t-2 border-dashed border-gray-300 z-0 hidden md:block"></div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative z-10 space-y-12 md:space-y-0">
+                     {[
+                        { num: 1, title: 'Gather weather & soil info' },
+                        { num: 2, title: 'Remove bad or missing readings' },
+                        { num: 3, title: 'Our AI studies the patterns' },
+                        { num: 4, title: 'Find out what affected the prediction' },
+                        { num: 5, title: 'Get results on your phone or computer' }
+                     ].map((step, idx) => (
+                        <div key={idx} className="flex flex-col items-center group">
+                           {/* Circle */}
+                           <div className="w-16 h-16 rounded-full bg-[#83610e] text-white flex items-center justify-center text-2xl font-bold mb-6 shadow-xl shadow-[#83610e]/20 transition-transform duration-300 group-hover:-translate-y-2 group-hover:scale-110 group-hover:bg-[#d6a540]">
+                              {step.num}
+                           </div>
+                           <p className="text-[#052112] font-semibold text-sm max-w-[160px] mx-auto leading-snug">
+                              {step.title}
+                           </p>
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
          </div>
       </section>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes marquee {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(calc(-50% - 1rem)); }
-        }
-        .animate-marquee {
-          animation: marquee 50s linear infinite;
-        }
-        .hover\\:animation-paused:hover {
-          animation-play-state: paused;
-        }
-      `}} />
 
+      {/* ── Sustainability Section (Image Left, Green Right) ── */}
+      <section className="bg-[#052112] w-full flex flex-col md:flex-row overflow-hidden border-b-2 border-[#d6a540]">
+         {/* Left Image Placeholder */}
+         <div className="md:w-1/2 min-h-[500px] bg-gray-200 relative">
+            <img 
+               src="/farmer-bg.png" 
+               alt="Farmer inspecting crops" 
+               className="absolute inset-0 w-full h-full object-cover"
+            />
+         </div>
+         
+         {/* Right Content */}
+         <div className="md:w-1/2 p-12 lg:p-24 flex flex-col justify-center bg-[#052112]">
+            <span className="text-[#95b0a1] text-xs font-bold tracking-widest uppercase mb-4">
+               Sustainability
+            </span>
+            <h2 className="font-serif text-5xl text-white leading-tight mb-16">
+               Sustainable Farming.<br/>Measurable Impact.
+            </h2>
+            
+            <div className="space-y-10">
+               <div>
+                  <h4 className="text-[#d6a540] text-sm font-bold tracking-widest uppercase mb-3">Smarter</h4>
+                  <p className="text-[#95b0a1] font-medium text-base">
+                     Get irrigation suggestions based on actual soil needs, not guesswork.
+                  </p>
+               </div>
+               <div>
+                  <h4 className="text-[#d6a540] text-sm font-bold tracking-widest uppercase mb-3">Faster</h4>
+                  <p className="text-[#95b0a1] font-medium text-base">
+                     Know what to do today — not after a week of waiting for expert advice.
+                  </p>
+               </div>
+               <div>
+                  <h4 className="text-[#d6a540] text-sm font-bold tracking-widest uppercase mb-3">Flexible</h4>
+                  <p className="text-[#95b0a1] font-medium text-base">
+                     Whether you grow wheat, paddy, or vegetables — the system adapts to your crop.
+                  </p>
+               </div>
+            </div>
+         </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-[#031509] pt-16 pb-12 w-full">
+         <div className="max-w-[1440px] mx-auto px-6 lg:px-16 flex flex-col md:flex-row justify-between gap-12">
+            
+            {/* Logo & Description */}
+            <div className="max-w-md">
+               <h2 className="text-white font-bold text-xl mb-4 tracking-tight">CropShield</h2>
+               <p className="text-[#698877] text-sm font-medium leading-relaxed mb-6">
+                  Advancing the frontier of agricultural intelligence through explainable AI and precision data engineering.
+               </p>
+            </div>
+            
+            <div className="flex gap-16 lg:gap-24">
+               {/* Nav Links */}
+               <div className="flex flex-col gap-4">
+                  <h4 className="text-white text-xs font-bold tracking-widest uppercase mb-2">Navigation</h4>
+                  <a href="#home" className="text-[#698877] text-sm font-medium hover:text-white transition-colors">Home</a>
+                  <a href="#how-it-works" className="text-[#698877] text-sm font-medium hover:text-white transition-colors">How It Works</a>
+                  <a href="#features" className="text-[#698877] text-sm font-medium hover:text-white transition-colors">Features</a>
+               </div>
+            </div>
+
+         </div>
+      </footer>
+      
     </div>
   );
 };

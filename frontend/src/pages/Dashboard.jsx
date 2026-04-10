@@ -82,20 +82,22 @@ const Dashboard = () => {
 
   // ── Fetch dashboard stats ──────────────────────────────────────────────────
   useEffect(() => {
+    let isMounted = true;
     const fetchStats = async () => {
       try {
         const res = await api.get('/dashboard/stats');
-        setStats(res.data);
+        if (isMounted) setStats(res.data);
       } catch (err) {
-        if (err.response?.status === 401 || err.response?.status === 403) {
+        if (isMounted && (err.response?.status === 401 || err.response?.status === 403)) {
           localStorage.removeItem('token');
           navigate('/login');
         }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
     fetchStats();
+    return () => { isMounted = false; };
   }, [navigate]);
 
   // ── Real-time weather polling ─────────────────────────────────────────────
@@ -129,41 +131,81 @@ const Dashboard = () => {
 
   // Geolocation on mount to acquire user's initial tracking coordinates
   useEffect(() => {
+    let isMounted = true;
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => {
-          const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, name: 'Your Location' };
-          setLiveLocation(loc);
+          if (isMounted) {
+             const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, name: 'Your Location' };
+             setLiveLocation(loc);
+          }
         },
         () => { /* silent fallback to default location */ }
       );
     }
+    return () => { isMounted = false; };
   }, []);
 
   // Single robust polling effect dependent on exact references (no stale closures)
   useEffect(() => {
+    let isMounted = true;
+
+    const safeFetch = async () => {
+       try {
+         const res = await api.get(`/realtime/weather?lat=${liveLocation.lat}&lon=${liveLocation.lon}&crop=${liveCrop}`);
+         if (!isMounted) return;
+         const d = res.data;
+         setLiveWeather(d.weather);
+         if (d.prediction) setLivePrediction(d.prediction);
+         setLastUpdated(new Date());
+         setLiveError('');
+         setLiveHistory(prev => {
+           const now = new Date();
+           const label = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+           const point = {
+             time:        label,
+             Temperature: d.weather.temperature,
+             Humidity:    d.weather.humidity,
+             Rainfall:    d.weather.rainfall_mm,
+             Yield:       d.prediction?.yield ?? null,
+           };
+           const updated = [...prev, point];
+           return updated.length > 20 ? updated.slice(updated.length - 20) : updated;
+         });
+       } catch (err) {
+         if (isMounted) setLiveError('Unable to fetch live weather. Retrying...');
+       } finally {
+         if (isMounted) setLiveLoading(false);
+       }
+    };
+
     // Initial fetch for the current crop/location state
-    fetchLiveWeather(liveLocation, liveCrop);
+    safeFetch();
     
-    // Set up continuous tracking using fresh references
+    // Set up continuous tracking
     clearInterval(liveIntervalRef.current);
     liveIntervalRef.current = setInterval(() => {
-       fetchLiveWeather(liveLocation, liveCrop);
+       if (isMounted) safeFetch();
     }, 30000);
     
-    return () => clearInterval(liveIntervalRef.current);
+    return () => {
+       isMounted = false;
+       clearInterval(liveIntervalRef.current);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveLocation, liveCrop]);
 
   // ── Fetch alerts when notifications open ─────────────────────────────────
   useEffect(() => {
+    let isMounted = true;
     if (alertsOpen) {
       setAlertsLoading(true);
       api.get('/alerts')
-        .then(r => setAlerts(r.data))
+        .then(r => { if (isMounted) setAlerts(r.data); })
         .catch(() => {})
-        .finally(() => setAlertsLoading(false));
+        .finally(() => { if (isMounted) setAlertsLoading(false); });
     }
+    return () => { isMounted = false; };
   }, [alertsOpen]);
 
   const unreadCount = alerts.filter(a => !a.isRead).length;
@@ -461,6 +503,71 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+
+            {/* ── Live Environmental Insights ── */}
+            {liveWeather && (() => {
+               // ML Dataset Driven Optimal Ranges
+               const cropProfiles = {
+                 Rice:   { minTemp: 20, maxTemp: 35, minRain: 100, minHum: 80, maxHum: 100 },
+                 Wheat:  { minTemp: 10, maxTemp: 25, minRain: 30,  minHum: 50, maxHum: 75 },
+                 Maize:  { minTemp: 15, maxTemp: 30, minRain: 50,  minHum: 55, maxHum: 85 },
+                 Banana: { minTemp: 25, maxTemp: 35, minRain: 90,  minHum: 75, maxHum: 95 },
+                 Mango:  { minTemp: 23, maxTemp: 35, minRain: 50,  minHum: 45, maxHum: 65 },
+                 Grapes: { minTemp: 15, maxTemp: 35, minRain: 20,  minHum: 40, maxHum: 70 },
+                 Cotton: { minTemp: 21, maxTemp: 35, minRain: 50,  minHum: 60, maxHum: 85 },
+                 Jute:   { minTemp: 24, maxTemp: 35, minRain: 120, minHum: 70, maxHum: 95 },
+                 default:{ minTemp: 15, maxTemp: 33, minRain: 40,  minHum: 50, maxHum: 85 }
+               };
+               const profile = cropProfiles[liveCrop] || cropProfiles.default;
+               
+               const isHeatStress = liveWeather.temperature > profile.maxTemp;
+               const isColdStress = liveWeather.temperature < profile.minTemp;
+               const isDrought    = liveWeather.rainfall_mm < profile.minRain;
+               const isFungus     = liveWeather.humidity > profile.maxHum;
+
+               const isOptimal = !isHeatStress && !isColdStress && !isDrought && !isFungus;
+
+               return (
+                 <div className="bg-[#163a50]/5 p-6 rounded-[2rem] border border-[#163a50]/10 mb-8 border-l-8 border-l-[#8fb13d]">
+                    <h3 className="text-xl font-black text-[#163a50] mb-4 flex items-center gap-2">
+                       <svg className="w-6 h-6 text-[#8fb13d]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                       Dataset Insights for {liveCrop}
+                    </h3>
+                    <div className="space-y-4">
+                       {isHeatStress && (
+                          <div className="flex gap-3 text-sm font-medium">
+                             <span className="w-2.5 h-2.5 rounded-full bg-[#cd3d4c] shrink-0 mt-1.5 shadow-[0_0_8px_#cd3d4c]"></span>
+                             <p className="text-[#163a50]/80 leading-relaxed"><strong className="text-[#cd3d4c]">Heat Stress Alert:</strong> {liveWeather.temperature}°C exceeds the dataset optimum ({profile.maxTemp}°C). Consider deploying shade netting or heavy evening irrigation.</p>
+                          </div>
+                       )}
+                       {isColdStress && (
+                          <div className="flex gap-3 text-sm font-medium">
+                             <span className="w-2.5 h-2.5 rounded-full bg-[#fbc943] shrink-0 mt-1.5 shadow-[0_0_8px_#fbc943]"></span>
+                             <p className="text-[#163a50]/80 leading-relaxed"><strong className="text-yellow-600">Cold Warning:</strong> {liveWeather.temperature}°C is below the threshold ({profile.minTemp}°C). Monitor for frost damage; avoid mechanical stress.</p>
+                          </div>
+                       )}
+                       {isDrought && (
+                          <div className="flex gap-3 text-sm font-medium">
+                             <span className="w-2.5 h-2.5 rounded-full bg-[#fbc943] shrink-0 mt-1.5 shadow-[0_0_8px_#fbc943]"></span>
+                             <p className="text-[#163a50]/80 leading-relaxed"><strong className="text-yellow-600">Water Deficit (Drought):</strong> Simulated rainfall ({liveWeather.rainfall_mm}mm) is critically below the {liveCrop} dataset requirement ({profile.minRain}mm). Supplement via borewell irrigation immediately.</p>
+                          </div>
+                       )}
+                       {isFungus && (
+                          <div className="flex gap-3 text-sm font-medium">
+                             <span className="w-2.5 h-2.5 rounded-full bg-[#cd3d4c] shrink-0 mt-1.5 shadow-[0_0_8px_#cd3d4c]"></span>
+                             <p className="text-[#163a50]/80 leading-relaxed"><strong className="text-[#cd3d4c]">Fumigation Warning (Humidity):</strong> {liveWeather.humidity}% humidity exceeds the {profile.maxHum}% dataset bounds. Airborne pathogens are highly likely; apply fungal countermeasures.</p>
+                          </div>
+                       )}
+                       {isOptimal && (
+                          <div className="flex gap-3 text-sm font-medium">
+                             <span className="w-2.5 h-2.5 rounded-full bg-[#8fb13d] shrink-0 mt-1.5 shadow-[0_0_8px_#8fb13d]"></span>
+                             <p className="text-[#163a50]/80 leading-relaxed"><strong className="text-[#8fb13d]">ML Optimal Alignment:</strong> Current environmental parameters precisely match the historical dataset optimums for {liveCrop}. Yield potential is maximized.</p>
+                          </div>
+                       )}
+                    </div>
+                 </div>
+               );
+            })()}
 
             {/* Bottom Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -888,165 +995,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* ═══════════════════════════════════════════════════════════════════
-                DATASET UPLOAD SECTION
-            ═══════════════════════════════════════════════════════════════════ */}
-            <div className="mt-2">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-                <h2 className="text-2xl font-black text-[#163a50] whitespace-nowrap">AI Dataset Integration</h2>
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
-              </div>
-              <p className="text-center text-gray-500 font-medium mb-10 max-w-2xl mx-auto">
-                Upload a CSV with environmental readings. The ML engine processes each row, applies corrective
-                transformations, and generates a long-term yield impact projection.
-              </p>
 
-              {/* Drop Zone */}
-              <div
-                className={`relative border-2 border-dashed rounded-[2.5rem] p-12 text-center transition-all cursor-pointer mb-8
-                  ${dragOver ? 'border-[#8fb13d] bg-[#8fb13d]/5' : 'border-gray-200 hover:border-[#163a50]/40 bg-white'}`}
-                onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={e => { e.preventDefault(); setDragOver(false); handleFileUpload(e.dataTransfer.files[0]); }}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
-                  onChange={e => handleFileUpload(e.target.files[0])} />
-
-                {uploadLoading ? (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-14 h-14 border-4 border-[#8fb13d] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-[#163a50] font-bold text-lg">Processing dataset through ML engine...</p>
-                    <p className="text-gray-400 text-sm font-medium">Parsing rows, applying transformations &amp; computing yield impact.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-full bg-[#163a50]/5 flex items-center justify-center mx-auto mb-2">
-                      <svg className="w-9 h-9 text-[#163a50]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
-                          d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                      </svg>
-                    </div>
-                    <p className="text-[#163a50] font-black text-lg">Drop your CSV here or click to browse</p>
-                    <p className="text-gray-400 text-sm font-medium">Accepts columns: Temperature, Rainfall, Humidity, Soil_pH (header names are flexible)</p>
-                    <div className="px-6 py-3 bg-[#163a50] text-[#fbc943] font-black rounded-full text-sm hover:bg-[#2a5a4a] transition-colors">
-                      Upload Dataset
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Success / Error Banner */}
-              {uploadSuccess && (
-                <div className="flex items-center gap-4 p-5 bg-[#8fb13d]/10 border border-[#8fb13d]/20 rounded-2xl mb-8">
-                  <div className="w-10 h-10 rounded-full bg-[#8fb13d] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  </div>
-                  <p className="text-[#163a50] font-bold">{uploadSuccess}</p>
-                </div>
-              )}
-              {uploadError && (
-                <div className="flex items-center gap-4 p-5 bg-[#cd3d4c]/10 border border-[#cd3d4c]/20 rounded-2xl mb-8">
-                  <div className="w-10 h-10 rounded-full bg-[#cd3d4c] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                  </div>
-                  <p className="text-[#cd3d4c] font-bold">{uploadError}</p>
-                </div>
-              )}
-
-              {/* ── Dataset Results ── */}
-              {datasetResult && (
-                <div className="space-y-8">
-                  {/* Summary KPI Row */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      { label: 'Rows Processed',   value: datasetResult.rowsProcessed,           color: '#163a50' },
-                      { label: 'Raw Yield Δ',       value: `${datasetResult.avgRawYieldImpact}%`, color: '#cd3d4c' },
-                      { label: 'ML-Adjusted Yield Δ', value: `${datasetResult.avgAdjYieldImpact}%`, color: '#8fb13d' },
-                      { label: 'Overall Risk',      value: datasetResult.overallRisk,             color: datasetResult.overallRisk === 'Critical' ? '#cd3d4c' : datasetResult.overallRisk === 'Elevated' ? '#fbc943' : '#8fb13d' },
-                    ].map(k => (
-                      <div key={k.label} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 text-center">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{k.label}</p>
-                        <p className="text-3xl font-black" style={{ color: k.color }}>{k.value}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Yield Impact Chart: With Action vs No Action */}
-                  <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-                    <div className="mb-8">
-                      <h3 className="text-2xl font-black text-[#163a50]">Yield Impact: Action vs No Action</h3>
-                      <p className="text-gray-400 text-sm mt-2 font-medium">6-month projected yield trajectory based on uploaded dataset analysis.</p>
-                    </div>
-                    <div className="flex gap-6 mb-6 flex-wrap">
-                      <div className="flex items-center gap-2 text-sm font-bold text-[#8fb13d]"><div className="w-4 h-4 rounded-full bg-[#8fb13d]"></div>With ML Optimization</div>
-                      <div className="flex items-center gap-2 text-sm font-bold text-[#cd3d4c]"><div className="w-4 h-4 rounded-full bg-[#cd3d4c]"></div>No Action Taken</div>
-                    </div>
-                    <div className="h-80 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={datasetResult.timeSeries} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="gWithAction" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%"  stopColor="#8fb13d" stopOpacity={0.35}/>
-                              <stop offset="95%" stopColor="#8fb13d" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="gNoAction" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%"  stopColor="#cd3d4c" stopOpacity={0.35}/>
-                              <stop offset="95%" stopColor="#cd3d4c" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                          <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontWeight: 'bold' }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontWeight: 'bold' }} domain={['auto', 'auto']} />
-                          <ReferenceLine y={100} stroke="#ddd" strokeDasharray="4 4" />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Area type="monotone" dataKey="withAction" name="With ML Optimization" stroke="#8fb13d" strokeWidth={4} fill="url(#gWithAction)" activeDot={{ r: 7, fill: '#8fb13d', stroke: '#fff', strokeWidth: 3 }} />
-                          <Area type="monotone" dataKey="noAction"   name="No Action Taken"       stroke="#cd3d4c" strokeWidth={4} fill="url(#gNoAction)"   activeDot={{ r: 7, fill: '#cd3d4c', stroke: '#fff', strokeWidth: 3 }} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-
-                  {/* Sample Calibration Table */}
-                  {datasetResult.sampleRows?.length > 0 && (
-                    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                      <h3 className="text-xl font-black text-[#163a50] mb-2">ML Calibration — Sample Readings</h3>
-                      <p className="text-gray-400 text-sm font-medium mb-6">Raw sensor readings vs ML-corrected values applied per row.</p>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-gray-100">
-                              {['Row', 'Raw Temp', 'Adj Temp', 'Raw Rain', 'Adj Rain', 'Raw Humidity', 'Adj Humidity', 'pH'].map(h => (
-                                <th key={h} className="text-left text-xs font-black text-gray-400 uppercase tracking-wider pb-4 pr-6 whitespace-nowrap">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {datasetResult.sampleRows.map((row, i) => (
-                              <tr key={i} className="border-b border-gray-50 hover:bg-[#f8fbfa] transition-colors">
-                                <td className="py-4 pr-6 font-black text-[#163a50]">#{i + 1}</td>
-                                <td className="py-4 pr-6 text-[#cd3d4c] font-bold">{row.rawTemp}°C</td>
-                                <td className="py-4 pr-6 text-[#8fb13d] font-bold">{row.adjTemp}°C</td>
-                                <td className="py-4 pr-6 text-[#cd3d4c] font-bold">{row.rawRain}mm</td>
-                                <td className="py-4 pr-6 text-[#8fb13d] font-bold">{row.adjRain}mm</td>
-                                <td className="py-4 pr-6 text-[#cd3d4c] font-bold">{row.rawHumidity}%</td>
-                                <td className="py-4 pr-6 text-[#8fb13d] font-bold">{row.adjHumidity}%</td>
-                                <td className="py-4 pr-6 text-[#163a50] font-bold">{row.adjPH}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         )}
 

@@ -9,33 +9,41 @@ const ForecastTab = () => {
   const [location, setLocation] = useState({ lat: 20.5937, lon: 78.9629, name: 'Central India' });
   const [crop, setCrop] = useState('Rice');
 
-  const fetchForecast = async (loc = location, c = crop) => {
+  const fetchForecast = async (loc = location, c = crop, isMounted = { current: true }) => {
     setLoading(true);
     try {
       const res = await api.get(`/forecast/4day?lat=${loc.lat}&lon=${loc.lon}&crop=${c}`);
-      setData(res.data);
-      setError(null);
+      if (isMounted.current) {
+         setData(res.data);
+         setError(null);
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to fetch forecast & countermeasures computing.');
+      if (isMounted.current) setError('Failed to fetch forecast & countermeasures computing.');
     } finally {
-      setLoading(false);
+      if (isMounted.current) setLoading(false);
     }
   };
 
   useEffect(() => {
+    const isMounted = { current: true };
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         pos => {
+          if (!isMounted.current) return;
           const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, name: 'Your Location' };
           setLocation(loc);
-          fetchForecast(loc, crop);
+          fetchForecast(loc, crop, isMounted);
         },
-        () => fetchForecast(location, crop)
+        () => {
+           if (isMounted.current) fetchForecast(location, crop, isMounted);
+        }
       );
     } else {
-      fetchForecast(location, crop);
+      fetchForecast(location, crop, isMounted);
     }
+    return () => { isMounted.current = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Use Custom Tooltip
